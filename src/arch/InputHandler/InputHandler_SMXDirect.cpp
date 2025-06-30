@@ -128,12 +128,6 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
     unsigned char buf[65];
     hid_device *handle = m_padDeviceStates[pad].device_handle;
 
-    if( !SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST) )
-		LOG->Warn( werr_ssprintf(GetLastError(), "Failed to set Pump thread priority") );
-
-	/* Enable priority boosting. */
-	SetThreadPriorityBoost( GetCurrentThread(), FALSE );
-
     while (!m_bShutdown) {
         int bytes_read = hid_read(handle, buf, 65);
 

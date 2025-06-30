@@ -88,7 +88,7 @@ bool InputHandler_Linux_Joystick::TryDevice(RString dev)
 				f.description = szName;
 
 			// The SMX InputHandler should be used instead of LinuxEvent for SMX platforms.
-			bool is_smx_platform = strstr(m_sName, "StepManiaX") != nullptr;
+			bool is_smx_platform = strstr(szName, "StepManiaX") != nullptr;
 			if (is_smx_platform) {
 				LOG->Info("LinuxJoystick: Ignoring SMX Stage HID device in favor of the SMX driver.");
 				return false;
