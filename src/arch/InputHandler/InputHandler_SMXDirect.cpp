@@ -37,32 +37,40 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
     }
 
     // count the number of pads initialized
-    int pad = 0;
+    int pad_counter = 0;
 
     // open all of them
-    while (pad < SMX_PAD_COUNT && devices_info != NULL) {
+    while (pad_counter < SMX_PAD_COUNT && devices_info != NULL) {
         // Open device
-        m_padDeviceStates[pad].device_handle = hid_open(SMX_VENDOR_ID, SMX_PRODUCT_ID, devices_info->serial_number);
-        if (m_padDeviceStates[pad].device_handle == NULL) {
+        hid_device *handle = hid_open(SMX_VENDOR_ID, SMX_PRODUCT_ID, devices_info->serial_number);
+        if (handle == NULL) {
             // Device could not be opened; move on to next
             devices_info = devices_info->next;
             continue;
         }
 
+        // Select pad
+        bool is_p2 = IsDeviceP2(handle);
+        int pad = is_p2 ? 1 : 0;
+        while (m_padDeviceStates[pad].is_initialized) {
+            // This loop shouldn't be triggered if pads are configured correctly
+            //TODO: Warn if multiple P1 or P2 pads?
+            pad = (pad + 1) % SMX_PAD_COUNT;
+        }
+
         // Configure metadata
+        m_padDeviceStates[pad].device_handle = handle;
         m_padDeviceStates[pad].is_initialized = true;
+        m_padDeviceStates[pad].is_p2 = is_p2;
         m_padDeviceStates[pad].last_state = 0; // Default: No buttons pressed upon initialization
-        m_padDeviceStates[pad].is_p2 = false; //TODO: Determine for real and use this to determine array position
 
         // Configure thread
         m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
         m_padDeviceStates[pad].device_input_thread.Create( pad == 0 ? DeviceThreadP1_Start : DeviceThreadP2_Start, this );
         
-        pad += 1;
+        pad_counter += 1;
         devices_info = devices_info->next;
     }
-
-    //TODO: Correct ordering if needed
 }
 
 InputHandler_SMXDirect::~InputHandler_SMXDirect() {
@@ -74,6 +82,7 @@ InputHandler_SMXDirect::~InputHandler_SMXDirect() {
             }
 
             hid_close(m_padDeviceStates[i].device_handle);
+            m_padDeviceStates[i].is_initialized = false;
         }
     }
 
@@ -117,11 +126,10 @@ int InputHandler_SMXDirect::DeviceThreadP2_Start(void *p) {
 
 void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
     InputDevice device = pad == 1 ? DEVICE_SMXD2 : DEVICE_SMXD1;
+    unsigned char buf[65];
+    hid_device *handle = m_padDeviceStates[pad].device_handle;
 
     while (!m_bShutdown) {
-        unsigned char buf[65];
-        hid_device *handle = m_padDeviceStates[pad].device_handle;
-
         int bytes_read = hid_read(handle, buf, 65);
 
         // An input state is at least 3 bytes
@@ -157,4 +165,22 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
         m_padDeviceStates[pad].last_state = new_state;
         InputHandler::UpdateTimer();
     }
+}
+
+bool InputHandler_SMXDirect::IsDeviceP2(hid_device *handle) {
+    const unsigned char data[] = { 5, 0x80, 0 };
+    hid_write(handle, data, sizeof(data));
+
+    unsigned char buf[65];
+    int bytes_read = hid_read(handle, buf, sizeof(buf));
+    if (bytes_read < 4) {
+        //TODO: Error handle better?
+        return false;
+    }
+
+    if ((char)buf[3] == '1') {
+        return true;
+    }
+
+    return false;
 }

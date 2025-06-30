@@ -28,9 +28,10 @@ public:
 	void GetDevicesAndDescriptions( std::vector<InputDeviceInfo>& vDevicesOut );
     RString GetDeviceSpecificInputString(const DeviceInput &di);
 private:
-    void DeviceThreadLoop(int pad);
     static int DeviceThreadP1_Start(void *p);
     static int DeviceThreadP2_Start(void *p);
+    void DeviceThreadLoop(int pad);
+    bool IsDeviceP2(hid_device *handle);
     struct SMXDevice m_padDeviceStates[SMX_PAD_COUNT];
     bool m_bShutdown;
 };
