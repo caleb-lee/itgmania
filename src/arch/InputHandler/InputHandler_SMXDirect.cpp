@@ -1,5 +1,6 @@
 #include "global.h"
 #include "InputHandler_SMXDirect.h"
+#include "RageLog.h"
 
 REGISTER_INPUT_HANDLER_CLASS2( SMXDirect, SMXDirect );
 
@@ -31,9 +32,13 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
     // get all devices
     struct hid_device_info *devices_info = hid_enumerate(SMX_VENDOR_ID, SMX_PRODUCT_ID);
     if (devices_info == NULL) {
+        LOG->Warn("SMXDirect InputHandler failed to enumerate devices.");
         exit_hidapi();
         return;
     }
+
+    // Save the original devices info for later
+    struct hid_device_info *orig_hid_devices_info = devices_info;
 
     // count the number of pads initialized
     int pad_counter = 0;
@@ -43,7 +48,11 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
         // Open device
         hid_device *handle = hid_open(SMX_VENDOR_ID, SMX_PRODUCT_ID, devices_info->serial_number);
         if (handle == NULL) {
-            // Device could not be opened; move on to next
+            // Device could not be opened
+            // output error to log
+            LOG->Warn("SMXDirect InputHandler failed to open device handle.");
+
+            // move on to next
             devices_info = devices_info->next;
             continue;
         }
@@ -70,6 +79,9 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
         pad_counter += 1;
         devices_info = devices_info->next;
     }
+
+    // Free the devices info
+    hid_free_enumeration(orig_hid_devices_info);
 }
 
 InputHandler_SMXDirect::~InputHandler_SMXDirect() {
@@ -132,9 +144,13 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
         int bytes_read = hid_read(handle, buf, 65);
 
         // An input state is at least 3 bytes
-        //TODO: constantize? do more validation?
+        //TODO: constantize? do more validation? gracefully shut down device / loop upon being unplugged?
         if (bytes_read < 3) {
-            //TODO: Handle error better than simply requesting more data
+            if (bytes_read == -1) {
+                const wchar_t *error_string = hid_read_error(handle);
+                LOG->Warn("SMXDirect InputHandler (USB Read Error): %ls", error_string);
+                break; // Break on error
+            }
             continue;
         }
 
@@ -178,7 +194,10 @@ bool InputHandler_SMXDirect::IsDeviceP2(hid_device *handle) {
     unsigned char buf[65];
     int bytes_read = hid_read(handle, buf, sizeof(buf));
     if (bytes_read < 4) {
-        //TODO: Error handle better?
+        if (bytes_read == -1) {
+            const wchar_t *error_string = hid_read_error(handle);
+            LOG->Warn("SMXDirect InputHandler (Pad Metadata USB Read Error): %ls", error_string);
+        }
         return false;
     }
 

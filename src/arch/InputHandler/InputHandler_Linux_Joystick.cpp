@@ -87,18 +87,19 @@ bool InputHandler_Linux_Joystick::TryDevice(RString dev)
 			else
 				f.description = szName;
 
-			// The SMX InputHandler should be used instead of LinuxEvent for SMX platforms.
-			bool is_smx_platform = strstr(szName, "StepManiaX") != nullptr;
-			if (is_smx_platform) {
-				LOG->Info("LinuxJoystick: Ignoring SMX Stage HID device in favor of the SMX driver.");
-				return false;
-			}
-
 			LOG->Info("LinuxJoystick: Opened %s", dev.c_str() );
 			m_bDevicesChanged = true;
 			ret = true;
 
-			m_files.push_back(f);
+			// The SMX InputHandler should be used instead of LinuxEvent for SMX platforms.
+			bool is_smx_platform = strstr(szName, "StepManiaX") != nullptr;
+			if (is_smx_platform) {
+				LOG->Info("LinuxJoystick: Ignoring SMX Stage HID device in favor of the SMX driver.");
+				ret = false;
+			}
+			else {
+				m_files.push_back(f);
+			}
 		}
 		else LOG->Warn("LinuxJoystick: Failed to open %s: %s", dev.c_str(), strerror(errno) );
 	}
