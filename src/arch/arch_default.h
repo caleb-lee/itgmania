@@ -11,7 +11,7 @@
 #include "MemoryCard/MemoryCardDriverThreaded_Windows.h"
 
 inline const std::vector<RString>& GetDefaultInputDriverList() {
-	static const std::vector<RString> inputDriverList = { "DirectInput", "Pump", "Para" };
+	static const std::vector<RString> inputDriverList = { "SMXDirect", "DirectInput", "Pump", "Para" };
 	return inputDriverList;
 }
 
@@ -32,7 +32,7 @@ inline const std::vector<RString>& GetDefaultSoundDriverList() {
 #include "MemoryCard/MemoryCardDriverThreaded_MacOSX.h"
 
 inline const std::vector<RString>& GetDefaultInputDriverList() {
-	static const std::vector<RString> inputDriverList = { "HID" };
+	static const std::vector<RString> inputDriverList = { "SMXDirect", "HID" };
 	return inputDriverList;
 }
 
@@ -60,7 +60,7 @@ inline const std::vector<RString>& GetDefaultSoundDriverList() {
 
 #if defined(LINUX)
 inline const std::vector<RString>& GetDefaultInputDriverList() {
-	static const std::vector<RString> inputDriverList = { "X11", "LinuxEvent", "LinuxJoystick" };
+	static const std::vector<RString> inputDriverList = { "SMXDirect", "X11", "LinuxEvent", "LinuxJoystick" };
 	return inputDriverList;
 }
 #else

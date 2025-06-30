@@ -251,9 +251,11 @@ source_group("Arch Specific\\\\Lights"
              ${SMDATA_ARCH_LIGHTS_HPP})
 
 list(APPEND SMDATA_ARCH_INPUT_SRC "arch/InputHandler/InputHandler.cpp"
-            "arch/InputHandler/InputHandler_MonkeyKeyboard.cpp")
+            "arch/InputHandler/InputHandler_MonkeyKeyboard.cpp"
+            "arch/InputHandler/InputHandler_SMXDirect.cpp")
 list(APPEND SMDATA_ARCH_INPUT_HPP "arch/InputHandler/InputHandler.h"
-            "arch/InputHandler/InputHandler_MonkeyKeyboard.h")
+            "arch/InputHandler/InputHandler_MonkeyKeyboard.h"
+            "arch/InputHandler/InputHandler_SMXDirect.cpp")
 
 if(WIN32)
   list(APPEND SMDATA_ARCH_INPUT_SRC
