@@ -26,7 +26,6 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
         m_padDeviceStates[i].is_initialized = false;
     }
 
-    // TODO:
     // check for smx devices:
 
     // get all devices
@@ -139,10 +138,12 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
             continue;
         }
 
+        // Read input state from buffer
         uint16_t new_state = ((buf[2] & 0xFF) << 8) |
                 ((buf[1] & 0xFF) << 0);
-        uint16_t old_state = m_padDeviceStates[pad].last_state;
-        uint16_t changed_inputs = new_state ^ old_state;
+
+        // Update inputs
+        uint16_t changed_inputs = new_state ^ m_padDeviceStates[pad].last_state;
 
         // If inputs weren't updated, report the end of an empty poll and return
         if (changed_inputs == 0) {
@@ -168,9 +169,12 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
 }
 
 bool InputHandler_SMXDirect::IsDeviceP2(hid_device *handle) {
+    // Request device info
     const unsigned char data[] = { 5, 0x80, 0 };
     hid_write(handle, data, sizeof(data));
 
+    // Read next HID report to get response
+    // Pad data is contained in byte index 3, so 
     unsigned char buf[65];
     int bytes_read = hid_read(handle, buf, sizeof(buf));
     if (bytes_read < 4) {
@@ -178,9 +182,6 @@ bool InputHandler_SMXDirect::IsDeviceP2(hid_device *handle) {
         return false;
     }
 
-    if ((char)buf[3] == '1') {
-        return true;
-    }
-
-    return false;
+    // Pad is char '1' if P2, or char '0' if P1.
+    return (char)buf[3] == '1';
 }
