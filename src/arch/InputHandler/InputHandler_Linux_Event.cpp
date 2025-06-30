@@ -146,6 +146,14 @@ bool EventDevice::Open( RString sFile, InputDevice dev )
 		}
 	}
 
+	// The SMX InputHandler should be used instead of LinuxEvent for SMX platforms.
+	bool is_smx_platform = strstr(m_sName, "StepManiaX") != nullptr;
+	if (is_smx_platform) {
+		LOG->Info("LinuxEvent: Ignoring SMX Stage HID device in favor of the SMX driver.");
+		Close();
+		return false;
+	}
+
 	uint8_t iKeyMask[KEY_MAX/8 + 1];
 	memset( iKeyMask, 0, sizeof(iKeyMask) );
 	if( ioctl(m_iFD, EVIOCGBIT(EV_KEY, sizeof(iKeyMask)), iKeyMask) < 0 )

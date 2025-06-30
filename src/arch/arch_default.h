@@ -65,7 +65,7 @@ inline const std::vector<RString>& GetDefaultInputDriverList() {
 }
 #else
 inline const std::vector<RString>& GetDefaultInputDriverList() {
-	static const std::vector<RString> inputDriverList = { "X11" };
+	static const std::vector<RString> inputDriverList = { "SMXDirect", "X11" };
 	return inputDriverList;
 }
 #endif
