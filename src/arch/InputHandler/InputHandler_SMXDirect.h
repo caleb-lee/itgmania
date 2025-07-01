@@ -13,7 +13,6 @@ constexpr int SMX_PANEL_COUNT = 9;
 
 struct SMXDevice {
     bool is_initialized;
-    uint16_t last_state;
     RageThread device_input_thread;
     hid_device *device_handle;
     bool is_p2;

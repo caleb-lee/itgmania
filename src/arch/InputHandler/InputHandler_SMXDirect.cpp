@@ -62,7 +62,7 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
         int pad = is_p2 ? 1 : 0;
         while (m_padDeviceStates[pad].is_initialized) {
             // This loop shouldn't be triggered if pads are configured correctly
-            //TODO: Warn if multiple P1 or P2 pads?
+            LOG->Warn("SMXDirect InputHandler found multiple SMX stages assigned to the same player.");
             pad = (pad + 1) % SMX_PAD_COUNT;
         }
 
@@ -70,7 +70,6 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
         m_padDeviceStates[pad].device_handle = handle;
         m_padDeviceStates[pad].is_initialized = true;
         m_padDeviceStates[pad].is_p2 = is_p2;
-        m_padDeviceStates[pad].last_state = 0; // Default: No buttons pressed upon initialization
 
         // Configure thread
         m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
@@ -139,6 +138,7 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
     InputDevice device = pad == 1 ? DEVICE_SMXD2 : DEVICE_SMXD1;
     unsigned char buf[65];
     hid_device *handle = m_padDeviceStates[pad].device_handle;
+    uint16_t last_state = 0;
 
     while (!m_bShutdown) {
         int bytes_read = hid_read(handle, buf, 65);
@@ -159,7 +159,7 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
                 ((buf[1] & 0xFF) << 0);
 
         // Update inputs
-        uint16_t changed_inputs = new_state ^ m_padDeviceStates[pad].last_state;
+        uint16_t changed_inputs = new_state ^ last_state;
 
         // If inputs weren't updated, report the end of an empty poll and return
         if (changed_inputs == 0) {
@@ -179,7 +179,7 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
         }
 
 	    // Save the new input state for later, and report the end of a poll.
-        m_padDeviceStates[pad].last_state = new_state;
+        last_state = new_state;
         InputHandler::UpdateTimer();
     }
 }
