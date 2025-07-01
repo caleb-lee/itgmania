@@ -32,12 +32,12 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
     // get all devices
     struct hid_device_info *devices_info = hid_enumerate(SMX_VENDOR_ID, SMX_PRODUCT_ID);
     if (devices_info == NULL) {
-        LOG->Warn("SMXDirect InputHandler failed to enumerate devices.");
+        LOG->Info("SMXDirect InputHandler did not find any SMX devices.");
         exit_hidapi();
         return;
     }
 
-    // Save the original devices info for later
+    // Save the original devices info to be freed later
     struct hid_device_info *orig_hid_devices_info = devices_info;
 
     // count the number of pads initialized
@@ -87,6 +87,8 @@ InputHandler_SMXDirect::~InputHandler_SMXDirect() {
     m_bShutdown = true;
     for (int i = 0; i < SMX_PAD_COUNT; i++) {
         if (m_padDeviceStates[i].is_initialized) {
+            LOG->Info("SMXDirect InputHandler is closing pad %d", i);
+
             if (m_padDeviceStates[i].device_input_thread.IsCreated()) {
                 m_padDeviceStates[i].device_input_thread.Wait();
             }
