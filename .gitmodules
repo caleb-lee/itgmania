@@ -50,3 +50,6 @@
 	path = extern/hidapi
 	url = https://github.com/libusb/hidapi.git
 	shallow = true
+[submodule "extern/lowlatencydancegamesdk"]
+	path = extern/lowlatencydancegamesdk
+	url = https://github.com/caleb-lee/lowlatencydancegamesdk.git
