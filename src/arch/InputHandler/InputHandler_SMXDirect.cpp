@@ -8,135 +8,19 @@ constexpr short SMX_VENDOR_ID  = 0x2341;
 constexpr short SMX_PRODUCT_ID = 0x8037;
 
 InputHandler_SMXDirect::InputHandler_SMXDirect() {
-    if (!m_isLibusbInitialized) {
-        if (libusb_init(&m_ctx) < 0) {
-            LOG->Warn("SMXDirect InputHandler failed to initialize libusb.");
-            return;
-        }
-        else {
-            m_isLibusbInitialized = true;
-        }
+    m_instance(SMX_VENDOR_ID, SMX_PRODUCT_ID);
+    if (!m_instance.is_valid) {
+        return
     }
-
-    m_bShutdown = false;
-    for (int i = 0; i < SMX_PAD_COUNT; i++) {
-        m_padDeviceStates[i].is_initialized = false;
-    }
-
-    // check for smx devices:
-
-    // Open device
-    libusb_device_handle *handle = libusb_open_device_with_vid_pid(m_ctx, SMX_VENDOR_ID, SMX_PRODUCT_ID);
-    if (!handle)
-    {
-        LOG->Info("SMXDirect InputHandler: Device not found.");
-        libusb_exit(m_ctx);
-        return;
-    }
-
-    // Find the correct HID interface
-    struct libusb_config_descriptor *config;
-    libusb_get_active_config_descriptor(libusb_get_device(handle), &config);
-
-    int hid_interface = -1;
-    int hid_interface_index = -1;
-    for (int i = 0; i < config->bNumInterfaces; i++) {
-        const struct libusb_interface_descriptor *intf = &config->interface[i].altsetting[0];
-        if (intf->bInterfaceClass == 3) { // HID class = 3
-            hid_interface = intf->bInterfaceNumber;  // Use the actual interface number
-            hid_interface_index = i;  // Keep track of the array index for endpoint discovery
-            LOG->Info("SMXDirect InputHandler: Found HID interface: %d (index=%d, class=%d, subclass=%d, protocol=%d)", 
-                hid_interface, 
-                i, 
-                (int)intf->bInterfaceClass, 
-                (int)intf->bInterfaceSubClass, 
-                (int)intf->bInterfaceProtocol);
-            break;
-        }
-    }
-
-    if (hid_interface == -1) {
-        LOG->Warn("SMXDirect InputHandler: No HID interface found!");
-        libusb_free_config_descriptor(config);
-        libusb_close(handle);
-        libusb_exit(m_ctx);
-        return;
-    }
-
-    // Detach kernel driver if active
-    if (libusb_kernel_driver_active(handle, hid_interface) == 1)
-    {
-        LOG->Info("SMXDirect InputHandler: Kernel driver is active on interface %d, detaching...", hid_interface);
-        int ret = libusb_detach_kernel_driver(handle, hid_interface);
-        if (ret != 0)
-        {
-            LOG->Warn("SMXDirect InputHandler: Failed to detach kernel driver: %s", libusb_error_name(ret));
-            return;
-        }
-    }
-
-    // Claim the HID interface
-    if (libusb_claim_interface(handle, hid_interface) < 0)
-    {
-        LOG->Warn("SMXDirect InputHandler: Failed to claim HID interface %d", hid_interface);
-        libusb_free_config_descriptor(config);
-        libusb_close(handle);
-        libusb_exit(m_ctx);
-        return;
-    }
-
-    LOG->Info("SMXDirect InputHandler: Connected! Discovering endpoints...");
-
-    // Discover endpoints on the HID interface
-    uint8_t interrupt_in_endpoint = 0;
-    uint8_t interrupt_out_endpoint = 0;
-
-    for (int i = 0; i < config->interface[hid_interface_index].altsetting[0].bNumEndpoints; i++)
-    {
-        const struct libusb_endpoint_descriptor *ep = &config->interface[hid_interface_index].altsetting[0].endpoint[i];
-        
-        bool is_interrupt = (ep->bmAttributes & 0x03) == 0x03;
-        bool is_input = (ep->bEndpointAddress & 0x80) != 0;
-        bool is_output = (ep->bEndpointAddress & 0x80) == 0;
-        
-        LOG->Info("SMXDirect InputHandler: Endpoint 0x%02x: %s, %s, max packet size: %d",
-               ep->bEndpointAddress,
-               is_input ? "IN" : "OUT",
-               is_interrupt ? "Interrupt" : "Other",
-               ep->wMaxPacketSize);
-        
-        if (is_interrupt && is_input && interrupt_in_endpoint == 0) {
-            interrupt_in_endpoint = ep->bEndpointAddress;
-            LOG->Info("Using IN endpoint: 0x%02x", (int)interrupt_in_endpoint);
-        }
-
-        if (is_interrupt && is_output && interrupt_out_endpoint == 0) {
-            interrupt_out_endpoint = ep->bEndpointAddress;
-            LOG->Info("Found OUT endpoint: 0x%02x", (int)interrupt_out_endpoint);
-        }
-    }
-
-    libusb_free_config_descriptor(config);
-
-    if (interrupt_in_endpoint == 0) {
-        LOG->Warn("SMXDirect InputHandler: No interrupt IN endpoint found!");
-        libusb_release_interface(handle, hid_interface);
-        libusb_close(handle);
-        libusb_exit(m_ctx);
-        return;
-    }
-
+    
     // Start poll loop
 
     // Select pad
     int pad = 0; //TODO: placeholder: need to handle two pads
 
     // Configure metadata
-    m_padDeviceStates[pad].device_handle = handle;
     m_padDeviceStates[pad].is_initialized = true;
     m_padDeviceStates[pad].is_p2 = false; //TODO: placeholder: need to handle two pads
-    m_padDeviceStates[pad].hid_interface = hid_interface;
-    m_padDeviceStates[pad].interrupt_in_endpoint = interrupt_in_endpoint;
 
     // Configure thread
     m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
@@ -206,17 +90,9 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
     uint8_t interrupt_in_endpoint = m_padDeviceStates[pad].interrupt_in_endpoint;
     uint16_t last_state = 0;
     int bytes_read = 0;
-    int result = 0;
 
     while (!m_bShutdown) {
-        bytes_read = 0;
-        result = libusb_interrupt_transfer(
-            handle,
-            interrupt_in_endpoint,
-            buf,
-            sizeof(buf),
-            &bytes_read,
-            0); // never time out
+        bytes_read = m_instance.read_data(&buf, sizeof(buf));
 
         // An input state is at least 3 bytes
         //TODO: constantize? do more validation? gracefully shut down device / loop upon being unplugged?
