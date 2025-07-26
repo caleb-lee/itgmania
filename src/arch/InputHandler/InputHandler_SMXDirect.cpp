@@ -8,9 +8,9 @@ constexpr short SMX_VENDOR_ID  = 0x2341;
 constexpr short SMX_PRODUCT_ID = 0x8037;
 
 InputHandler_SMXDirect::InputHandler_SMXDirect() {
-    m_instance(SMX_VENDOR_ID, SMX_PRODUCT_ID);
-    if (!m_instance.is_valid) {
-        return
+    m_instance = new LowLatencyDanceGameSDK(SMX_VENDOR_ID, SMX_PRODUCT_ID);
+    if (!m_instance->is_valid()) {
+        return;
     }
     
     // Start poll loop
@@ -37,15 +37,11 @@ InputHandler_SMXDirect::~InputHandler_SMXDirect() {
                 m_padDeviceStates[i].device_input_thread.Wait();
             }
 
-            libusb_device_handle *handle = m_padDeviceStates[i].device_handle;
-            uint8_t hid_interface = m_padDeviceStates[i].hid_interface;
-            libusb_release_interface(handle, hid_interface);
-            libusb_close(handle);
-            m_padDeviceStates[i].is_initialized = false;
+            //TODO: per-pad cleanup
         }
     }
 
-    libusb_exit(m_ctx);
+    delete m_instance;
 }
 
 void InputHandler_SMXDirect::GetDevicesAndDescriptions(std::vector<InputDeviceInfo>& vDevicesOut)
@@ -86,20 +82,17 @@ int InputHandler_SMXDirect::DeviceThreadP2_Start(void *p) {
 void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
     InputDevice device = pad == 1 ? DEVICE_SMXD2 : DEVICE_SMXD1;
     unsigned char buf[65];
-    libusb_device_handle *handle = m_padDeviceStates[pad].device_handle;
-    uint8_t interrupt_in_endpoint = m_padDeviceStates[pad].interrupt_in_endpoint;
     uint16_t last_state = 0;
     int bytes_read = 0;
 
     while (!m_bShutdown) {
-        bytes_read = m_instance.read_data(&buf, sizeof(buf));
+        bytes_read = m_instance->read_data(buf, sizeof(buf));
 
         // An input state is at least 3 bytes
         //TODO: constantize? do more validation? gracefully shut down device / loop upon being unplugged?
         if (bytes_read < 3) {
-            if (result < 0) {
-                const char *error_string = libusb_error_name(result);
-                LOG->Warn("SMXDirect InputHandler (libusb error): %s", error_string);
+            if (bytes_read < 0) {
+                LOG->Warn("SMXDirect InputHandler failed to read data");
                 break; // Break on error
             }
             continue;

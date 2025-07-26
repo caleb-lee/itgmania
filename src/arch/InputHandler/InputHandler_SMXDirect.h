@@ -32,7 +32,7 @@ private:
     bool IsDeviceP2(SMXDevice *device);
     struct SMXDevice m_padDeviceStates[SMX_PAD_COUNT];
     bool m_bShutdown;
-    LowLatencyDanceGameSDK m_instance;
+    LowLatencyDanceGameSDK *m_instance;
 };
 
 #endif

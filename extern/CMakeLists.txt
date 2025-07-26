@@ -14,7 +14,7 @@ include(CMakeProject-tommath.cmake)
 include(CMakeProject-png.cmake)
 include(CMakeProject-ixwebsocket.cmake)
 include(CMakeProject-miniz.cmake)
-# include(CMakeProject-lowlatencydancegamesdk.cmake)
+include(CMakeProject-lowlatencydancegamesdk.cmake)
 
 # External projects
 include(CMakeProject-libusb.cmake)
