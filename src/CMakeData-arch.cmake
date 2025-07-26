@@ -255,7 +255,7 @@ list(APPEND SMDATA_ARCH_INPUT_SRC "arch/InputHandler/InputHandler.cpp"
             "arch/InputHandler/InputHandler_SMXDirect.cpp")
 list(APPEND SMDATA_ARCH_INPUT_HPP "arch/InputHandler/InputHandler.h"
             "arch/InputHandler/InputHandler_MonkeyKeyboard.h"
-            "arch/InputHandler/InputHandler_SMXDirect.cpp")
+            "arch/InputHandler/InputHandler_SMXDirect.h")
 
 if(WIN32)
   list(APPEND SMDATA_ARCH_INPUT_SRC
