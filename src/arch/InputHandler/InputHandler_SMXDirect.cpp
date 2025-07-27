@@ -8,24 +8,10 @@ constexpr short SMX_VENDOR_ID  = 0x2341;
 constexpr short SMX_PRODUCT_ID = 0x8037;
 
 InputHandler_SMXDirect::InputHandler_SMXDirect() {
-    m_instance = new LowLatencyDanceGameSDK(SMX_VENDOR_ID, SMX_PRODUCT_ID);
-    if (!m_instance->is_valid()) {
-        return;
+    m_instance = nullptr;
+    for (int i = 0; i < SMX_PAD_COUNT; i++) {
+        m_padDeviceStates[i].is_initialized = false;
     }
-    
-    // Start poll loop
-
-    // Select pad
-    int pad = 0; //TODO: placeholder: need to handle two pads
-
-    // Configure metadata
-    m_padDeviceStates[pad].is_initialized = true;
-    m_padDeviceStates[pad].is_p2 = false; //TODO: placeholder: need to handle two pads
-	m_padDeviceStates[1].is_initialized = false;
-
-    // Configure thread
-    m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
-    m_padDeviceStates[pad].device_input_thread.Create( pad == 0 ? DeviceThreadP1_Start : DeviceThreadP2_Start, this );
 }
 
 InputHandler_SMXDirect::~InputHandler_SMXDirect() {
@@ -45,8 +31,38 @@ InputHandler_SMXDirect::~InputHandler_SMXDirect() {
     delete m_instance;
 }
 
+bool InputHandler_SMXDirect::InitializePads() {
+    if (m_instance != nullptr) {
+        return true;
+    }
+
+    m_instance = new LowLatencyDanceGameSDK(SMX_VENDOR_ID, SMX_PRODUCT_ID);
+    if (!m_instance->is_valid()) {
+        return false;
+    }
+    
+    // Start poll loop
+
+    // Select pad
+    int pad = 0; //TODO: placeholder: need to handle two pads
+
+    // Configure metadata
+    m_padDeviceStates[pad].is_initialized = true;
+    m_padDeviceStates[pad].is_p2 = false; //TODO: placeholder: need to handle two pads
+
+    // Configure thread
+    m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
+    m_padDeviceStates[pad].device_input_thread.Create( pad == 0 ? DeviceThreadP1_Start : DeviceThreadP2_Start, this );
+
+    return true;
+}
+
 void InputHandler_SMXDirect::GetDevicesAndDescriptions(std::vector<InputDeviceInfo>& vDevicesOut)
 {
+    if (!InitializePads()) {
+        return;
+    }
+
     for (int i = 0; i < SMX_PAD_COUNT; i++) {
         if (m_padDeviceStates[i].is_initialized) {
             vDevicesOut.push_back(InputDeviceInfo(InputDevice(i == 1 ? DEVICE_SMXD2 : DEVICE_SMXD1), ssprintf("SMXD%d", i + 1)));

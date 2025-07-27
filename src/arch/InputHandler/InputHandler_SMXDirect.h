@@ -26,6 +26,7 @@ public:
 	void GetDevicesAndDescriptions( std::vector<InputDeviceInfo>& vDevicesOut );
     RString GetDeviceSpecificInputString(const DeviceInput &di);
 private:
+    bool InitializePads();
     static int DeviceThreadP1_Start(void *p);
     static int DeviceThreadP2_Start(void *p);
     void DeviceThreadLoop(int pad);
