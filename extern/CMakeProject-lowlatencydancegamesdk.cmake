@@ -25,6 +25,9 @@ ExternalProject_Add(
   INSTALL_DIR ${INSTALL_DIR}
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${INSTALL_DIR}
              -DCMAKE_INSTALL_LIBDIR=${LIB_DIR}
+			 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>
+             -DCMAKE_C_FLAGS="/MT$<$<CONFIG:Debug>:d>"
+             -DCMAKE_CXX_FLAGS="/MT$<$<CONFIG:Debug>:d>"
              ${ARCH_FLAGS}
   BUILD_IN_SOURCE OFF
   CONFIGURE_HANDLED_BY_BUILD ON
@@ -43,7 +46,8 @@ if(APPLE)
   set_property(TARGET lowlatencydancegamesdk PROPERTY INTERFACE_LINK_LIBRARIES 
     "${LIBUSB_PATH};-framework Security;-framework CoreFoundation;-framework IOKit")
 elseif(WIN32)
-  set_property(TARGET lowlatencydancegamesdk PROPERTY INTERFACE_LINK_LIBRARIES "${LIBUSB_PATH}")
+  set_property(TARGET lowlatencydancegamesdk PROPERTY INTERFACE_LINK_LIBRARIES 
+    "${LIBUSB_PATH}" windowsapp)
 else()
   set_property(TARGET lowlatencydancegamesdk PROPERTY INTERFACE_LINK_LIBRARIES "${LIBUSB_PATH}")
 endif()

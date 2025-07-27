@@ -21,6 +21,7 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
     // Configure metadata
     m_padDeviceStates[pad].is_initialized = true;
     m_padDeviceStates[pad].is_p2 = false; //TODO: placeholder: need to handle two pads
+	m_padDeviceStates[1].is_initialized = false;
 
     // Configure thread
     m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
