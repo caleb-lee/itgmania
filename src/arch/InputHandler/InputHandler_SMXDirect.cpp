@@ -9,6 +9,7 @@ constexpr short SMX_PRODUCT_ID = 0x8037;
 
 InputHandler_SMXDirect::InputHandler_SMXDirect() {
     m_instance = nullptr;
+    m_bShutdown = false;
     for (int i = 0; i < SMX_PAD_COUNT; i++) {
         m_padDeviceStates[i].is_initialized = false;
     }
@@ -24,11 +25,12 @@ InputHandler_SMXDirect::~InputHandler_SMXDirect() {
                 m_padDeviceStates[i].device_input_thread.Wait();
             }
 
-            //TODO: per-pad cleanup
+            //TODO: per-pad cleanup?
         }
     }
 
     delete m_instance;
+    m_instance = nullptr;
 }
 
 bool InputHandler_SMXDirect::InitializePads() {
@@ -38,6 +40,7 @@ bool InputHandler_SMXDirect::InitializePads() {
 
     m_instance = new LowLatencyDanceGameSDK(SMX_VENDOR_ID, SMX_PRODUCT_ID);
     if (!m_instance->is_valid()) {
+        LOG->Warn("SMXDirect: LowLatencyDanceGameSDK is not valid, initialization failed");
         return false;
     }
     
@@ -109,7 +112,7 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
         //TODO: constantize? do more validation? gracefully shut down device / loop upon being unplugged?
         if (bytes_read < 3) {
             if (bytes_read < 0) {
-                LOG->Warn("SMXDirect InputHandler failed to read data");
+                LOG->Warn("SMXDirect InputHandler failed to read data (error %d)", bytes_read);
                 break; // Break on error
             }
             continue;
