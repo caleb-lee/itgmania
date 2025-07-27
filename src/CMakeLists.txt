@@ -342,7 +342,7 @@ list(APPEND SMDATA_LINK_LIB "mad"
                             "ogg"
                             "ixwebsocket"
                             "hidapi"
-                            "${LOWLATENCYDANCEGAMESDK_LIBRARY}")
+                            "lowlatencydancegamesdk")
 
 if(WIN32)
   list(APPEND SMDATA_LINK_LIB
@@ -450,8 +450,7 @@ endif()
 target_link_libraries("${SM_EXE_NAME}" ${SMDATA_LINK_LIB})
 
 list(APPEND SM_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
-            "${SM_GENERATED_SRC_DIR}"
-            "${LOWLATENCYDANCEGAMESDK_INCLUDE_DIR}")
+            "${SM_GENERATED_SRC_DIR}")
 
 if(APPLE)
   list(APPEND SM_INCLUDE_DIRS "archutils/Unix")
