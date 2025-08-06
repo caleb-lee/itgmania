@@ -8,10 +8,10 @@ constexpr short SMX_VENDOR_ID  = 0x2341;
 constexpr short SMX_PRODUCT_ID = 0x8037;
 
 InputHandler_SMXDirect::InputHandler_SMXDirect() {
-    m_instance = nullptr;
     m_bShutdown = false;
     for (int i = 0; i < SMX_PAD_COUNT; i++) {
         m_padDeviceStates[i].is_initialized = false;
+        m_padDeviceStates[i].device_instance = nullptr;
     }
 }
 
@@ -19,43 +19,69 @@ InputHandler_SMXDirect::~InputHandler_SMXDirect() {
     m_bShutdown = true;
     for (int i = 0; i < SMX_PAD_COUNT; i++) {
         if (m_padDeviceStates[i].is_initialized) {
-            LOG->Info("SMXDirect InputHandler is closing pad %d", i);
+            LOG->Info("SMXDirect InputHandler is closing pad %d", i + 1);
 
             if (m_padDeviceStates[i].device_input_thread.IsCreated()) {
                 m_padDeviceStates[i].device_input_thread.Wait();
             }
 
-            //TODO: per-pad cleanup?
+            // Clean up device instance
+            if (m_padDeviceStates[i].device_instance) {
+                delete m_padDeviceStates[i].device_instance;
+                m_padDeviceStates[i].device_instance = nullptr;
+            }
         }
     }
 
-    delete m_instance;
-    m_instance = nullptr;
+    LowLatencyDanceGameSDK::shutdown();
 }
 
 bool InputHandler_SMXDirect::InitializePads() {
-    if (m_instance != nullptr) {
+    // Check if already initialized
+    bool anyInitialized = false;
+    for (int i = 0; i < SMX_PAD_COUNT; i++) {
+        if (m_padDeviceStates[i].is_initialized) {
+            anyInitialized = true;
+            break;
+        }
+    }
+    if (anyInitialized) {
         return true;
     }
 
-    m_instance = new LowLatencyDanceGameSDK(SMX_VENDOR_ID, SMX_PRODUCT_ID);
-    if (!m_instance->is_valid()) {
-        LOG->Warn("SMXDirect: LowLatencyDanceGameSDK is not valid, initialization failed");
+    // Initialize the SDK
+    if (!LowLatencyDanceGameSDK::initialize()) {
+        LOG->Warn("SMXDirect: LowLatencyDanceGameSDK initialization failed");
         return false;
     }
-    
-    // Start poll loop
 
-    // Select pad
-    int pad = 0; //TODO: placeholder: need to handle two pads
+    // Discover devices
+    LowLatencyDanceGameSDK** devices = LowLatencyDanceGameSDK::discover_devices();
+    if (!devices) {
+        LOG->Warn("SMXDirect: Failed to discover devices");
+        LowLatencyDanceGameSDK::shutdown();
+        return false;
+    }
 
-    // Configure metadata
-    m_padDeviceStates[pad].is_initialized = true;
-    m_padDeviceStates[pad].is_p2 = false; //TODO: placeholder: need to handle two pads
+    // Initialize each pad that was discovered
+    for (int pad = 0; pad < SMX_PAD_COUNT; pad++) {
+        if (devices[pad] && devices[pad]->is_valid()) {
+            m_padDeviceStates[pad].device_instance = devices[pad];
+            m_padDeviceStates[pad].is_initialized = true;
+            m_padDeviceStates[pad].is_p2 = (devices[pad]->get_player_number() == 1);
 
-    // Configure thread
-    m_padDeviceStates[pad].device_input_thread.SetName( ssprintf("SMX Device Thread %d", pad) );
-    m_padDeviceStates[pad].device_input_thread.Create( pad == 0 ? DeviceThreadP1_Start : DeviceThreadP2_Start, this );
+            // Configure thread
+            m_padDeviceStates[pad].device_input_thread.SetName(ssprintf("SMX Device Thread P%d", pad + 1));
+            m_padDeviceStates[pad].device_input_thread.Create(pad == 0 ? DeviceThreadP1_Start : DeviceThreadP2_Start, this);
+            
+            LOG->Info("SMXDirect: Initialized pad %d (P%d)", pad, devices[pad]->get_player_number() + 1);
+        } else {
+            m_padDeviceStates[pad].device_instance = nullptr;
+        }
+    }
+
+    // Clean up the devices array (instances are now stored in m_padDeviceStates)
+    delete[] devices;
 
     return true;
 }
@@ -105,8 +131,14 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
     uint16_t last_state = 0;
     int bytes_read = 0;
 
+    LowLatencyDanceGameSDK* deviceInstance = m_padDeviceStates[pad].device_instance;
+    if (!deviceInstance) {
+        LOG->Warn("SMXDirect: No device instance for pad %d", pad);
+        return;
+    }
+
     while (!m_bShutdown) {
-        bytes_read = m_instance->read_data(buf, sizeof(buf));
+        bytes_read = deviceInstance->read_data(buf, sizeof(buf));
 
         // An input state is at least 3 bytes
         //TODO: constantize? do more validation? gracefully shut down device / loop upon being unplugged?
@@ -146,28 +178,4 @@ void InputHandler_SMXDirect::DeviceThreadLoop(int pad) {
         last_state = new_state;
         InputHandler::UpdateTimer();
     }
-}
-
-bool InputHandler_SMXDirect::IsDeviceP2(SMXDevice *device) {
-    //TODO: placeholder: need to handle two pads
-    /* // Request device info
-    const unsigned char data[] = { 5, 0x80, 0 };
-    hid_write(handle, data, sizeof(data));
-
-    // Read next HID report to get response
-    // Pad data is contained in byte index 3, so 
-    unsigned char buf[65];
-    int bytes_read = hid_read(handle, buf, sizeof(buf));
-    if (bytes_read < 4) {
-        if (bytes_read == -1) {
-            const wchar_t *error_string = hid_read_error(handle);
-            LOG->Warn("SMXDirect InputHandler (Pad Metadata USB Read Error): %ls", error_string);
-        }
-        return false;
-    }
-
-    // Pad is char '1' if P2, or char '0' if P1.
-    return (char)buf[3] == '1'; */
-
-    return false;
 }
