@@ -2,7 +2,6 @@
 #define INPUT_HANDLER_SMXDIRECT_H
 
 #include "InputHandler.h"
-#include "RageThreads.h"
 #include <lowlatencydancegamesdk.h>
 
 #include <cstdint>
@@ -10,13 +9,6 @@
 
 constexpr int SMX_PAD_COUNT = 2;
 constexpr int SMX_PANEL_COUNT = 9;
-
-struct SMXDevice {
-    bool is_initialized;
-    RageThread device_input_thread;
-    bool is_p2;
-    LowLatencyDanceGameSDK* device_instance;
-};
 
 class InputHandler_SMXDirect: public InputHandler
 {
@@ -26,13 +18,12 @@ public:
 
 	void GetDevicesAndDescriptions( std::vector<InputDeviceInfo>& vDevicesOut );
     RString GetDeviceSpecificInputString(const DeviceInput &di);
+    
 private:
-    bool InitializePads();
-    static int DeviceThreadP1_Start(void *p);
-    static int DeviceThreadP2_Start(void *p);
-    void DeviceThreadLoop(int pad);
-    struct SMXDevice m_padDeviceStates[SMX_PAD_COUNT];
-    bool m_bShutdown;
+    void ProcessInputEvent(LowLatencyDanceGameSDK::Player player, uint16_t button_state);
+    
+    bool m_bInitialized;
+    uint16_t m_playerInputStates[SMX_PAD_COUNT];
 };
 
 #endif
