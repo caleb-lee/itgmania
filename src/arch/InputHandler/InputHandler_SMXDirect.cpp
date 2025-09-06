@@ -56,10 +56,10 @@ RString InputHandler_SMXDirect::GetDeviceSpecificInputString(const DeviceInput &
     static const char* buttonStrings[SMX_PANEL_COUNT] =
     {
         "UpLeft", "Up", "UpRight", "Left", "Center",
-        "Right", "DownLeft", "Down", "DownRight"
+        "Right", "DownLeft", "Down", "DownRight", "Start", "Select"
     };
 
-    const char* buttonString = (button >= 0 && button < SMX_PANEL_COUNT) ? buttonStrings[button] : "unknown";
+    const char* buttonString = (button >= 0 && button < SMX_PANEL_COUNT) ? buttonStrings[button] : "Unknown";
 
     return ssprintf("SMX P%d %s", pad, buttonString);
 }

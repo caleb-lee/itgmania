@@ -8,7 +8,7 @@
 #include <vector>
 
 constexpr int SMX_PAD_COUNT = 2;
-constexpr int SMX_PANEL_COUNT = 9;
+constexpr int SMX_PANEL_COUNT = 11;
 
 class InputHandler_SMXDirect: public InputHandler
 {
