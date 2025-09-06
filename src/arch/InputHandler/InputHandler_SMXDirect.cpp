@@ -93,3 +93,7 @@ void InputHandler_SMXDirect::ProcessInputEvent(LowLatencyDanceGameSDK::Player pl
     m_playerInputStates[padIndex] = button_state;
     InputHandler::UpdateTimer();
 }
+
+bool InputHandler_SMXDirect::IsDeviceHandledByLLDG(uint16_t vendor_id, uint16_t product_id) {
+    return LowLatencyDanceGameSDK::isPadCompatible(vendor_id, product_id);
+}

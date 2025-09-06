@@ -18,6 +18,8 @@ public:
 
 	void GetDevicesAndDescriptions( std::vector<InputDeviceInfo>& vDevicesOut );
     RString GetDeviceSpecificInputString(const DeviceInput &di);
+
+    static bool IsDeviceHandledByLLDG(uint16_t vendor_id, uint16_t product_id);
     
 private:
     void ProcessInputEvent(LowLatencyDanceGameSDK::Player player, uint16_t button_state);

@@ -13,6 +13,7 @@
 #include "GamePreferences.h" //needed for Axis Fix
 
 #include "InputHandler_DirectInputHelper.h"
+#include "InputHandler_SMXDirect.h"
 
 #ifdef NTDDI_WIN8 // Link to Xinput9_1_0.lib on Windows 8 SDK and above to ensure linkage to Xinput9_1_0.dll
 #pragma comment(lib, "Xinput9_1_0.lib")
@@ -185,11 +186,13 @@ static BOOL CALLBACK EnumDevicesCallback( const DIDEVICEINSTANCE *pdidInstance, 
 		default: LOG->Info( "DInput: Unrecognized device ignored." ); return DIENUM_CONTINUE;
 	}
 
-	// The SMX InputHandler should be used instead of DirectInput for SMX platforms.
-	bool is_smx_platform = strstr(pdidInstance->tszProductName, "StepManiaX") != nullptr;
-	if (is_smx_platform) {
-		LOG->Info("DInput: Ignoring SMX Stage HID device in favor of the SMX driver.");
-		return DIENUM_CONTINUE; // Ignore SMX platform HID device if SMX.dll is available
+	// Ignore pads for which a low latency driver is available
+	uint16_t vendor_id = LOWORD(pdidInstance->guidProduct.Data1);
+  	uint16_t product_id = HIWORD(pdidInstance->guidProduct.Data1);
+	bool is_handled_by_lldg = InputHandler_SMXDirect::IsDeviceHandledByLLDG(vendor_id, product_id);
+	if (is_handled_by_lldg) {
+		LOG->Info("DInput: Ignoring HID device in favor of the low latency driver.");
+		return DIENUM_CONTINUE; // Ignore platform HID device if low latency driver is available
 	}
 
 	device.JoystickInst = *pdidInstance;
