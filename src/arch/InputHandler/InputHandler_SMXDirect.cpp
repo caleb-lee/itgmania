@@ -10,11 +10,9 @@ InputHandler_SMXDirect::InputHandler_SMXDirect() {
         m_playerInputStates[i] = 0;
     }
     
-    // Initialize the SDK with a lambda callback that captures 'this'
+    // Initialize the SDK with a static callback function and pass 'this' as user_data
     m_bInitialized = LowLatencyDanceGameSDK::getInstance().initialize(
-        [this](LowLatencyDanceGameSDK::Player player, uint16_t button_state) {
-            ProcessInputEvent(player, button_state);
-        }
+        &InputHandler_SMXDirect::InputCallback, this
     );
     
     if (m_bInitialized) {
@@ -62,6 +60,11 @@ RString InputHandler_SMXDirect::GetDeviceSpecificInputString(const DeviceInput &
     const char* buttonString = (button >= 0 && button < SMX_PANEL_COUNT) ? buttonStrings[button] : "Unknown";
 
     return ssprintf("SMX P%d %s", pad, buttonString);
+}
+
+void InputHandler_SMXDirect::InputCallback(LowLatencyDanceGameSDK::Player player, uint16_t button_state, void* user_data) {
+    InputHandler_SMXDirect* handler = static_cast<InputHandler_SMXDirect*>(user_data);
+    handler->ProcessInputEvent(player, button_state);
 }
 
 void InputHandler_SMXDirect::ProcessInputEvent(LowLatencyDanceGameSDK::Player player, uint16_t button_state) {
